@@ -72,8 +72,8 @@ export default function Dashboard() {
   // ── Full-screen ritual mode ───────────────────────────────────────────
   if (ritualTrack && ritualHabits) {
     return (
-      <div className="min-h-screen bg-[#0f1117] flex flex-col">
-        <header className="h-14 bg-[#1a1d27] border-b border-[#2e3250] flex items-center px-4 gap-4 shrink-0">
+      <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--bg-base)' }}>
+        <header className="h-14 border-b flex items-center px-4 gap-4 shrink-0" style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
           <div className="flex items-center gap-2.5">
             <div
               className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
@@ -83,7 +83,7 @@ export default function Dashboard() {
                 <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
               </svg>
             </div>
-            <span className="font-bold text-[#e8eaf6] text-base tracking-tight">MomentumOS</span>
+            <span className="font-bold text-base tracking-tight" style={{ color: 'var(--text-primary)' }}>MomentumOS</span>
           </div>
           <div className="flex-1" />
           <span
@@ -104,9 +104,9 @@ export default function Dashboard() {
 
   // ── Normal dashboard ──────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#0f1117] flex flex-col">
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--bg-base)' }}>
       {/* Top Navbar */}
-      <header className="h-14 bg-[#1a1d27] border-b border-[#2e3250] flex items-center px-4 gap-4 shrink-0 z-30 sticky top-0">
+      <header className="h-14 border-b flex items-center px-4 gap-4 shrink-0 z-30 sticky top-0" style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
         {/* Brand */}
         <div className="flex items-center gap-2.5">
           <div
@@ -117,14 +117,14 @@ export default function Dashboard() {
               <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
             </svg>
           </div>
-          <span className="font-bold text-[#e8eaf6] text-base tracking-tight">MomentumOS</span>
+          <span className="font-bold text-base tracking-tight" style={{ color: 'var(--text-primary)' }}>MomentumOS</span>
         </div>
 
         <div className="flex-1" />
 
         {/* User info + logout */}
         <div className="flex items-center gap-3">
-          <span className="text-[#7b82b0] text-sm hidden sm:block truncate max-w-[180px]">{displayLabel}</span>
+          <span className="text-sm hidden sm:block truncate max-w-[180px]" style={{ color: 'var(--text-muted)' }}>{displayLabel}</span>
           <div
             className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
             style={{ backgroundColor: 'color-mix(in srgb, var(--accent) 20%, transparent)', border: '1px solid color-mix(in srgb, var(--accent) 40%, transparent)', color: 'var(--accent)' }}
@@ -133,7 +133,8 @@ export default function Dashboard() {
           </div>
           <button
             onClick={handleSignOut}
-            className="flex items-center gap-1.5 text-sm text-[#7b82b0] hover:text-[#e8eaf6] transition-colors px-2 py-1 rounded-lg hover:bg-[#2e3250]"
+            className="flex items-center gap-1.5 text-sm transition-colors px-2 py-1 rounded-lg"
+            style={{ color: 'var(--text-muted)' }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -147,9 +148,9 @@ export default function Dashboard() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop Sidebar */}
-        <aside className="hidden lg:flex w-56 bg-[#1a1d27] border-r border-[#2e3250] flex-col shrink-0">
+        <aside className="hidden lg:flex w-56 border-r flex-col shrink-0" style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
           <nav className="flex-1 p-3 space-y-1">
-            <p className="text-xs font-semibold text-[#4a5080] uppercase tracking-wider px-3 py-2 mt-1">
+            <p className="text-xs font-semibold uppercase tracking-wider px-3 py-2 mt-1" style={{ color: 'var(--text-faint)' }}>
               Navigation
             </p>
             {NAV_ITEMS.map((item) => {
@@ -161,16 +162,13 @@ export default function Dashboard() {
                   className={`
                     w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
                     transition-all duration-150
-                    ${isActive
-                      ? 'border'
-                      : 'text-[#7b82b0] hover:text-[#e8eaf6] hover:bg-[#22263a]'
-                    }
+                    ${isActive ? 'border' : ''}
                   `}
                   style={isActive ? {
                     color: 'var(--accent)',
                     backgroundColor: 'color-mix(in srgb, var(--accent) 12%, transparent)',
                     borderColor: 'color-mix(in srgb, var(--accent) 25%, transparent)',
-                  } : {}}
+                  } : { color: 'var(--text-muted)' }}
                 >
                   <span style={isActive ? { color: 'var(--accent)' } : {}}>{item.icon}</span>
                   {item.label}
@@ -178,8 +176,8 @@ export default function Dashboard() {
               )
             })}
           </nav>
-          <div className="p-4 border-t border-[#2e3250]">
-            <div className="text-xs text-[#4a5080] text-center">MomentumOS v0.2.0</div>
+          <div className="p-4 border-t" style={{ borderColor: 'var(--border)' }}>
+            <div className="text-xs text-center" style={{ color: 'var(--text-faint)' }}>MomentumOS v0.2.0</div>
           </div>
         </aside>
 
@@ -194,7 +192,7 @@ export default function Dashboard() {
       </div>
 
       {/* Mobile Bottom Nav */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-[#1a1d27] border-t border-[#2e3250] flex items-center justify-around h-16 px-2">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 border-t flex items-center justify-around h-16 px-2" style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
         {NAV_ITEMS.map((item) => {
           const isActive = activeNav === item.id
           return (
@@ -202,7 +200,7 @@ export default function Dashboard() {
               key={item.id}
               onClick={() => handleNavChange(item.id)}
               className="flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all"
-              style={isActive ? { color: 'var(--accent)' } : { color: '#4a5080' }}
+              style={isActive ? { color: 'var(--accent)' } : { color: 'var(--text-faint)' }}
             >
               {item.icon}
               <span className="text-[10px] font-medium">{item.label}</span>
