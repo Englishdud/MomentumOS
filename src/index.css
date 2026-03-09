@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: #0f1117;
+    color: #e8eaf6;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+
+  input, button, textarea, select {
+    font-family: inherit;
+  }
+}
