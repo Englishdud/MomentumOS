@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Make Tailwind's dark: variant respond to the .dark class on <html> */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ── CSS Custom Properties ─────────────────────────────────────────── */
 :root {
   --accent: #6c63ff;
