@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './AuthContext'
@@ -26,35 +27,30 @@ function applyToDOM(settings) {
 export function SettingsProvider({ children }) {
   const { user } = useAuth()
   const [settings, setSettings] = useState(DEFAULTS)
-  const [loading, setLoading] = useState(true)
+  // loading is true only while we have a user and are fetching their settings
+  const [loading, setLoading] = useState(false)
 
   // Apply defaults immediately on mount
-  useEffect(() => {
-    applyToDOM(DEFAULTS)
-  }, [])
+  useEffect(() => { applyToDOM(DEFAULTS) }, [])
 
   useEffect(() => {
-    if (user) {
-      fetchSettings()
-    } else {
+    if (!user) return
+    const load = async () => {
+      setLoading(true)
+      const { data } = await supabase
+        .from('user_settings')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle()
+      if (data) {
+        const merged = { ...DEFAULTS, ...data }
+        setSettings(merged)
+        applyToDOM(merged)
+      }
       setLoading(false)
     }
+    load()
   }, [user])
-
-  const fetchSettings = async () => {
-    const { data } = await supabase
-      .from('user_settings')
-      .select('*')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (data) {
-      const merged = { ...DEFAULTS, ...data }
-      setSettings(merged)
-      applyToDOM(merged)
-    }
-    setLoading(false)
-  }
 
   const updateSettings = async (updates) => {
     const newSettings = { ...settings, ...updates }
