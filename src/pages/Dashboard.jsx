@@ -41,10 +41,11 @@ const NAV_ITEMS = [
 export default function Dashboard() {
   const { user, signOut } = useAuth()
   const [activeNav, setActiveNav] = useState('tracks')
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   // Ritual state
   const [ritualTrack, setRitualTrack] = useState(null)
   const [ritualHabits, setRitualHabits] = useState(null)
+  // Transition key for panel animation
+  const [panelKey, setPanelKey] = useState(0)
 
   const handleSignOut = async () => {
     await signOut()
@@ -60,8 +61,11 @@ export default function Dashboard() {
     setRitualHabits(null)
   }
 
-  const handleNavigateToTracks = () => {
-    setActiveNav('tracks')
+  const handleNavChange = (id) => {
+    if (id !== activeNav) {
+      setActiveNav(id)
+      setPanelKey((k) => k + 1)
+    }
   }
 
   const userInitial = user?.email?.[0]?.toUpperCase() ?? '?'
@@ -70,7 +74,6 @@ export default function Dashboard() {
   if (ritualTrack && ritualHabits) {
     return (
       <div className="min-h-screen bg-[#0f1117] flex flex-col">
-        {/* Minimal navbar in ritual mode */}
         <header className="h-14 bg-[#1a1d27] border-b border-[#2e3250] flex items-center px-4 gap-4 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-[#6c63ff] flex items-center justify-center shrink-0">
@@ -85,14 +88,9 @@ export default function Dashboard() {
             Ritual in progress
           </span>
         </header>
-
         <main className="flex-1 overflow-y-auto">
           <div className="p-6 max-w-2xl mx-auto">
-            <DailyRitual
-              track={ritualTrack}
-              habits={ritualHabits}
-              onClose={handleCloseRitual}
-            />
+            <DailyRitual track={ritualTrack} habits={ritualHabits} onClose={handleCloseRitual} />
           </div>
         </main>
       </div>
@@ -104,19 +102,6 @@ export default function Dashboard() {
     <div className="min-h-screen bg-[#0f1117] flex flex-col">
       {/* Top Navbar */}
       <header className="h-14 bg-[#1a1d27] border-b border-[#2e3250] flex items-center px-4 gap-4 shrink-0 z-30 sticky top-0">
-        {/* Mobile hamburger */}
-        <button
-          className="lg:hidden text-[#7b82b0] hover:text-[#e8eaf6] transition-colors p-1"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          aria-label="Toggle sidebar"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-          </svg>
-        </button>
-
         {/* Brand */}
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg bg-[#6c63ff] flex items-center justify-center shrink-0">
@@ -150,24 +135,8 @@ export default function Dashboard() {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar overlay (mobile) */}
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 bg-black/50 z-20 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-
-        {/* Left Sidebar */}
-        <aside
-          className={`
-            fixed lg:relative top-14 lg:top-0 left-0 h-[calc(100vh-3.5rem)] lg:h-auto
-            w-56 bg-[#1a1d27] border-r border-[#2e3250]
-            flex flex-col z-20 shrink-0
-            transform transition-transform duration-200 ease-in-out
-            ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-          `}
-        >
+        {/* Desktop Sidebar — hidden on mobile */}
+        <aside className="hidden lg:flex w-56 bg-[#1a1d27] border-r border-[#2e3250] flex-col shrink-0">
           <nav className="flex-1 p-3 space-y-1">
             <p className="text-xs font-semibold text-[#4a5080] uppercase tracking-wider px-3 py-2 mt-1">
               Navigation
@@ -175,7 +144,7 @@ export default function Dashboard() {
             {NAV_ITEMS.map((item) => (
               <button
                 key={item.id}
-                onClick={() => { setActiveNav(item.id); setSidebarOpen(false) }}
+                onClick={() => handleNavChange(item.id)}
                 className={`
                   w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
                   transition-all duration-150
@@ -190,22 +159,40 @@ export default function Dashboard() {
               </button>
             ))}
           </nav>
-
-          {/* Sidebar footer */}
           <div className="p-4 border-t border-[#2e3250]">
             <div className="text-xs text-[#4a5080] text-center">MomentumOS v0.1.0</div>
           </div>
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 overflow-y-auto">
-          <div className="p-6 max-w-5xl mx-auto">
+        <main className="flex-1 overflow-y-auto pb-20 lg:pb-0">
+          <div key={panelKey} className="p-6 max-w-5xl mx-auto animate-fadeIn">
             {activeNav === 'tracks' && <TracksPanel onStartRitual={handleStartRitual} />}
-            {activeNav === 'journeys' && <JourneysPanel onNavigateToTracks={handleNavigateToTracks} />}
+            {activeNav === 'journeys' && <JourneysPanel onNavigateToTracks={() => handleNavChange('tracks')} />}
             {activeNav === 'score' && <ScorePanel />}
           </div>
         </main>
       </div>
+
+      {/* Mobile Bottom Nav — visible only on < lg */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-[#1a1d27] border-t border-[#2e3250] flex items-center justify-around h-16 px-2">
+        {NAV_ITEMS.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => handleNavChange(item.id)}
+            className={`
+              flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all
+              ${activeNav === item.id
+                ? 'text-[#6c63ff]'
+                : 'text-[#4a5080]'
+              }
+            `}
+          >
+            {item.icon}
+            <span className="text-[10px] font-medium">{item.label}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   )
 }
