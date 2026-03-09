@@ -4,6 +4,8 @@ import { SettingsProvider } from './contexts/SettingsContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import AuthPage from './pages/AuthPage'
 import Dashboard from './pages/Dashboard'
+import LandingPage from './pages/LandingPage'
+import WhyUsPage from './pages/WhyUsPage'
 
 export default function App() {
   return (
@@ -11,6 +13,8 @@ export default function App() {
       <AuthProvider>
         <SettingsProvider>
           <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/why" element={<WhyUsPage />} />
             <Route path="/login" element={<AuthPage />} />
             <Route
               path="/dashboard"
@@ -20,9 +24,7 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
-            {/* Redirect root to dashboard (ProtectedRoute will redirect to /login if not authed) */}
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </SettingsProvider>
       </AuthProvider>
