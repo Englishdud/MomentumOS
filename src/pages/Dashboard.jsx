@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext'
 import TracksPanel from '../components/panels/TracksPanel'
 import JourneysPanel from '../components/panels/JourneysPanel'
 import ScorePanel from '../components/panels/ScorePanel'
+import DailyRitual from '../components/DailyRitual'
 
 const NAV_ITEMS = [
   {
@@ -41,13 +42,64 @@ export default function Dashboard() {
   const { user, signOut } = useAuth()
   const [activeNav, setActiveNav] = useState('tracks')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  // Ritual state
+  const [ritualTrack, setRitualTrack] = useState(null)
+  const [ritualHabits, setRitualHabits] = useState(null)
 
   const handleSignOut = async () => {
     await signOut()
   }
 
+  const handleStartRitual = (track, habits) => {
+    setRitualTrack(track)
+    setRitualHabits(habits)
+  }
+
+  const handleCloseRitual = () => {
+    setRitualTrack(null)
+    setRitualHabits(null)
+  }
+
+  const handleNavigateToTracks = () => {
+    setActiveNav('tracks')
+  }
+
   const userInitial = user?.email?.[0]?.toUpperCase() ?? '?'
 
+  // ── Full-screen ritual mode ──
+  if (ritualTrack && ritualHabits) {
+    return (
+      <div className="min-h-screen bg-[#0f1117] flex flex-col">
+        {/* Minimal navbar in ritual mode */}
+        <header className="h-14 bg-[#1a1d27] border-b border-[#2e3250] flex items-center px-4 gap-4 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-[#6c63ff] flex items-center justify-center shrink-0">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+              </svg>
+            </div>
+            <span className="font-bold text-[#e8eaf6] text-base tracking-tight">MomentumOS</span>
+          </div>
+          <div className="flex-1" />
+          <span className="text-xs font-medium text-[#6c63ff] bg-[#6c63ff]/10 border border-[#6c63ff]/25 px-3 py-1 rounded-full">
+            Ritual in progress
+          </span>
+        </header>
+
+        <main className="flex-1 overflow-y-auto">
+          <div className="p-6 max-w-2xl mx-auto">
+            <DailyRitual
+              track={ritualTrack}
+              habits={ritualHabits}
+              onClose={handleCloseRitual}
+            />
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  // ── Normal dashboard ──
   return (
     <div className="min-h-screen bg-[#0f1117] flex flex-col">
       {/* Top Navbar */}
@@ -148,8 +200,8 @@ export default function Dashboard() {
         {/* Main content */}
         <main className="flex-1 overflow-y-auto">
           <div className="p-6 max-w-5xl mx-auto">
-            {activeNav === 'tracks' && <TracksPanel />}
-            {activeNav === 'journeys' && <JourneysPanel />}
+            {activeNav === 'tracks' && <TracksPanel onStartRitual={handleStartRitual} />}
+            {activeNav === 'journeys' && <JourneysPanel onNavigateToTracks={handleNavigateToTracks} />}
             {activeNav === 'score' && <ScorePanel />}
           </div>
         </main>
