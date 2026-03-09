@@ -164,3 +164,38 @@ CREATE POLICY "Users can delete their own completions"
 CREATE INDEX IF NOT EXISTS completions_user_id_idx ON public.completions(user_id);
 CREATE INDEX IF NOT EXISTS completions_habit_id_idx ON public.completions(habit_id);
 CREATE INDEX IF NOT EXISTS completions_completed_at_idx ON public.completions(completed_at DESC);
+
+-- ============================================================
+-- USER SETTINGS TABLE
+-- Per-user preferences: theme, dark mode, habit defaults
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.user_settings (
+  id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id           UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+  display_name      TEXT,
+  theme_color       TEXT NOT NULL DEFAULT '#6c63ff',
+  dark_mode         BOOLEAN NOT NULL DEFAULT TRUE,
+  default_duration  INTEGER NOT NULL DEFAULT 10,
+  reminder_time     TEXT NOT NULL DEFAULT '09:00',
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.user_settings ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own settings"
+  ON public.user_settings FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own settings"
+  ON public.user_settings FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own settings"
+  ON public.user_settings FOR UPDATE
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own settings"
+  ON public.user_settings FOR DELETE
+  USING (auth.uid() = user_id);
+
+CREATE INDEX IF NOT EXISTS user_settings_user_id_idx ON public.user_settings(user_id);

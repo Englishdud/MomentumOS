@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import confetti from 'canvas-confetti'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -156,6 +157,21 @@ function HabitTimer({ habit, index, total, onDone }) {
 
 // ─── Summary Screen ─────────────────────────────────────────────────
 function RitualSummary({ track, completedHabits, totalElapsed, onClose }) {
+  useEffect(() => {
+    // Fire confetti burst when the summary mounts
+    const fire = (particleRatio, opts) =>
+      confetti({
+        origin: { y: 0.6 },
+        ...opts,
+        particleCount: Math.floor(200 * particleRatio),
+      })
+    fire(0.25, { spread: 26, startVelocity: 55 })
+    fire(0.2,  { spread: 60 })
+    fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 })
+    fire(0.1,  { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 })
+    fire(0.1,  { spread: 120, startVelocity: 45 })
+  }, [])
+
   return (
     <div className="flex flex-col items-center justify-center min-h-[70vh] px-4">
       {/* Celebration icon */}
@@ -204,9 +220,9 @@ function RitualSummary({ track, completedHabits, totalElapsed, onClose }) {
 
       <button
         onClick={onClose}
-        className="bg-[#6c63ff] hover:bg-[#857dff] text-white font-semibold px-8 py-3 rounded-xl text-sm transition-colors"
+        className="bg-[#6c63ff] hover:bg-[#857dff] text-white font-semibold px-8 py-3 rounded-xl text-sm transition-colors animate-confettiPop"
       >
-        Back to Tracks
+        Back to Home
       </button>
     </div>
   )
@@ -219,7 +235,6 @@ export default function DailyRitual({ track, habits, onClose }) {
   const [completed, setCompleted] = useState(false)
   const [totalElapsed, setTotalElapsed] = useState(0)
   const [completedCount, setCompletedCount] = useState(0)
-  const habitNames = useRef(habits.map((h) => h.name))
 
   const handleHabitDone = async (elapsed) => {
     const habit = habits[currentIndex]
