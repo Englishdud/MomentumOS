@@ -234,3 +234,14 @@ CREATE POLICY "league_update_own" ON public.user_league
 
 CREATE INDEX IF NOT EXISTS user_league_user_id_idx   ON public.user_league(user_id);
 CREATE INDEX IF NOT EXISTS user_league_tier_week_idx ON public.user_league(tier, week_start);
+
+-- Ensure all columns exist on pre-existing user_league tables (idempotent, safe to re-run)
+ALTER TABLE public.user_league ADD COLUMN IF NOT EXISTS display_name TEXT;
+ALTER TABLE public.user_league ADD COLUMN IF NOT EXISTS tier         INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE public.user_league ADD COLUMN IF NOT EXISTS week_start   DATE    NOT NULL DEFAULT CURRENT_DATE;
+ALTER TABLE public.user_league ADD COLUMN IF NOT EXISTS weekly_xp    INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE public.user_league ADD COLUMN IF NOT EXISTS total_xp     INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE public.user_league ADD COLUMN IF NOT EXISTS updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- Ensure xp_earned default is set on completions (fixes NOT NULL insert failures)
+ALTER TABLE public.completions ALTER COLUMN xp_earned SET DEFAULT 10;
