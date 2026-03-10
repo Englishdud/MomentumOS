@@ -260,11 +260,14 @@ export default function DailyRitual({ track, habits, streak = 0, onClose }) {
     const xp = 10 + Math.min(habit.duration_minutes ?? 0, 30) + streakBonus
 
     // Record the completion (XP is tracked separately in user_league)
-    await supabase.from('completions').insert({
+    const completionPayload = {
       habit_id: habit.id,
       user_id: user.id,
       completed_at: new Date().toISOString(),
-    })
+    }
+    console.log('[completions] insert payload:', completionPayload)
+    const { error: completionErr } = await supabase.from('completions').insert(completionPayload)
+    if (completionErr) console.error('[completions] insert error:', completionErr)
 
     // Update user_league XP
     const monday = currentMondayISO()
