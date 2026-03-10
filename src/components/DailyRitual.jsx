@@ -267,7 +267,12 @@ export default function DailyRitual({ track, habits, streak = 0, onClose }) {
     }
     console.log('[completions] insert payload:', completionPayload)
     const { error: completionErr } = await supabase.from('completions').insert(completionPayload)
-    if (completionErr) console.error('[completions] insert error:', completionErr)
+    if (completionErr) console.error('[completions] insert error:', {
+      message: completionErr.message,
+      code:    completionErr.code,
+      details: completionErr.details,
+      hint:    completionErr.hint,
+    })
 
     // Update user_league XP
     const monday = currentMondayISO()
