@@ -73,6 +73,8 @@ export default function Dashboard() {
     setRitualTrack(null)
     setRitualHabits(null)
     setRitualStreak(0)
+    // Force HomePanel to remount and re-fetch so streak/progress reflect new completions
+    setPanelKey((k) => k + 1)
   }
 
   const handleNavChange = (id) => {

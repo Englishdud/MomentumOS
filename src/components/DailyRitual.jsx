@@ -259,47 +259,59 @@ export default function DailyRitual({ track, habits, streak = 0, onClose }) {
     const streakBonus = streak >= 14 ? 20 : streak >= 7 ? 10 : streak >= 3 ? 5 : 0
     const xp = 10 + Math.min(habit.duration_minutes ?? 0, 30) + streakBonus
 
-    // Insert completion with XP
-    await supabase.from('completions').insert({
+    // Insert completion — try with xp_earned first, fall back without it if column is missing
+    const { error: insertErr } = await supabase.from('completions').insert({
       habit_id: habit.id,
       user_id: user.id,
       completed_at: new Date().toISOString(),
       xp_earned: xp,
     })
 
-    // Update user_league (select then update for atomic-ish increment)
-    const monday = currentMondayISO()
-    const displayName = settings.display_name || user?.email || ''
-    const { data: leagueRow } = await supabase
-      .from('user_league')
-      .select('tier, weekly_xp, total_xp, week_start')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (!leagueRow) {
-      // First time — insert a fresh row
-      await supabase.from('user_league').insert({
+    if (insertErr) {
+      // xp_earned column likely doesn't exist yet — insert without it so habit is always recorded
+      await supabase.from('completions').insert({
+        habit_id: habit.id,
         user_id: user.id,
-        display_name: displayName,
-        tier: 0,
-        week_start: monday,
-        weekly_xp: xp,
-        total_xp: xp,
+        completed_at: new Date().toISOString(),
       })
-    } else {
-      const isNewWeek = leagueRow.week_start < monday
-      const newWeeklyXp = isNewWeek ? xp : leagueRow.weekly_xp + xp
-      const newTotalXp = leagueRow.total_xp + xp
-      await supabase
+    }
+
+    // Update user_league — wrapped in try/catch since the table may not exist yet
+    try {
+      const monday = currentMondayISO()
+      const displayName = settings.display_name || user?.email || ''
+      const { data: leagueRow } = await supabase
         .from('user_league')
-        .update({
-          display_name: displayName,
-          week_start: isNewWeek ? monday : leagueRow.week_start,
-          weekly_xp: newWeeklyXp,
-          total_xp: newTotalXp,
-          updated_at: new Date().toISOString(),
-        })
+        .select('tier, weekly_xp, total_xp, week_start')
         .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (!leagueRow) {
+        await supabase.from('user_league').insert({
+          user_id: user.id,
+          display_name: displayName,
+          tier: 0,
+          week_start: monday,
+          weekly_xp: xp,
+          total_xp: xp,
+        })
+      } else {
+        const isNewWeek = leagueRow.week_start < monday
+        const newWeeklyXp = isNewWeek ? xp : leagueRow.weekly_xp + xp
+        const newTotalXp = leagueRow.total_xp + xp
+        await supabase
+          .from('user_league')
+          .update({
+            display_name: displayName,
+            week_start: isNewWeek ? monday : leagueRow.week_start,
+            weekly_xp: newWeeklyXp,
+            total_xp: newTotalXp,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', user.id)
+      }
+    } catch {
+      // league table not yet created — XP will be tracked once migration is applied
     }
 
     const newTotal = totalElapsed + elapsed
