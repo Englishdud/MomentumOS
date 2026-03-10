@@ -199,3 +199,38 @@ CREATE POLICY "Users can delete their own settings"
   USING (auth.uid() = user_id);
 
 CREATE INDEX IF NOT EXISTS user_settings_user_id_idx ON public.user_settings(user_id);
+
+-- ============================================================
+-- XP System & Leagues
+-- ============================================================
+
+-- Add xp_earned to completions (defaults to 10 for existing rows)
+ALTER TABLE public.completions ADD COLUMN IF NOT EXISTS xp_earned INTEGER NOT NULL DEFAULT 10;
+
+-- user_league: one row per user, tracks tier + weekly/total XP
+CREATE TABLE IF NOT EXISTS public.user_league (
+  id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id      UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+  display_name TEXT,
+  tier         INTEGER NOT NULL DEFAULT 0,           -- 0=Spark … 9=Supernova
+  week_start   DATE NOT NULL DEFAULT CURRENT_DATE,  -- ISO date of the Monday starting current week
+  weekly_xp    INTEGER NOT NULL DEFAULT 0,
+  total_xp     INTEGER NOT NULL DEFAULT 0,
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.user_league ENABLE ROW LEVEL SECURITY;
+
+-- All authenticated users can read the leaderboard
+CREATE POLICY "league_select_all" ON public.user_league
+  FOR SELECT TO authenticated USING (true);
+
+-- Users can only insert / update their own row
+CREATE POLICY "league_insert_own" ON public.user_league
+  FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "league_update_own" ON public.user_league
+  FOR UPDATE TO authenticated USING (auth.uid() = user_id);
+
+CREATE INDEX IF NOT EXISTS user_league_user_id_idx   ON public.user_league(user_id);
+CREATE INDEX IF NOT EXISTS user_league_tier_week_idx ON public.user_league(tier, week_start);
