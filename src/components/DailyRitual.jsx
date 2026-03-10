@@ -259,22 +259,12 @@ export default function DailyRitual({ track, habits, streak = 0, onClose }) {
     const streakBonus = streak >= 14 ? 20 : streak >= 7 ? 10 : streak >= 3 ? 5 : 0
     const xp = 10 + Math.min(habit.duration_minutes ?? 0, 30) + streakBonus
 
-    // Insert completion — try with xp_earned first, fall back without it if column is missing
-    const { error: insertErr } = await supabase.from('completions').insert({
+    // Record the completion (XP is tracked separately in user_league)
+    await supabase.from('completions').insert({
       habit_id: habit.id,
       user_id: user.id,
       completed_at: new Date().toISOString(),
-      xp_earned: xp,
     })
-
-    if (insertErr) {
-      // xp_earned column likely doesn't exist yet — insert without it so habit is always recorded
-      await supabase.from('completions').insert({
-        habit_id: habit.id,
-        user_id: user.id,
-        completed_at: new Date().toISOString(),
-      })
-    }
 
     // Update user_league XP
     const monday = currentMondayISO()
