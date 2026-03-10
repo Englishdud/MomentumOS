@@ -276,42 +276,39 @@ export default function DailyRitual({ track, habits, streak = 0, onClose }) {
       })
     }
 
-    // Update user_league — wrapped in try/catch since the table may not exist yet
-    try {
-      const monday = currentMondayISO()
-      const displayName = settings.display_name || user?.email || ''
-      const { data: leagueRow } = await supabase
-        .from('user_league')
-        .select('tier, weekly_xp, total_xp, week_start')
-        .eq('user_id', user.id)
-        .maybeSingle()
+    // Update user_league XP
+    const monday = currentMondayISO()
+    const displayName = settings.display_name || user?.email || ''
 
-      if (!leagueRow) {
-        await supabase.from('user_league').insert({
-          user_id: user.id,
-          display_name: displayName,
-          tier: 0,
-          week_start: monday,
-          weekly_xp: xp,
-          total_xp: xp,
-        })
-      } else {
-        const isNewWeek = leagueRow.week_start < monday
-        const newWeeklyXp = isNewWeek ? xp : leagueRow.weekly_xp + xp
-        const newTotalXp = leagueRow.total_xp + xp
-        await supabase
-          .from('user_league')
-          .update({
+    const { data: leagueRow, error: fetchErr } = await supabase
+      .from('user_league')
+      .select('tier, weekly_xp, total_xp, week_start')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (fetchErr) {
+      console.error('League fetch failed:', fetchErr)
+    } else {
+      const isNewWeek = leagueRow && leagueRow.week_start < monday
+      const prevWeeklyXp = (!leagueRow || isNewWeek) ? 0 : (leagueRow.weekly_xp ?? 0)
+      const prevTotalXp = leagueRow?.total_xp ?? 0
+
+      const { error: upsertErr } = await supabase
+        .from('user_league')
+        .upsert(
+          {
+            user_id: user.id,
             display_name: displayName,
-            week_start: isNewWeek ? monday : leagueRow.week_start,
-            weekly_xp: newWeeklyXp,
-            total_xp: newTotalXp,
+            tier: leagueRow?.tier ?? 0,
+            week_start: monday,
+            weekly_xp: prevWeeklyXp + xp,
+            total_xp: prevTotalXp + xp,
             updated_at: new Date().toISOString(),
-          })
-          .eq('user_id', user.id)
-      }
-    } catch {
-      // league table not yet created — XP will be tracked once migration is applied
+          },
+          { onConflict: 'user_id' }
+        )
+
+      if (upsertErr) console.error('League XP upsert failed:', upsertErr)
     }
 
     const newTotal = totalElapsed + elapsed
