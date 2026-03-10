@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
+import { LEAGUE_TIERS } from '../../lib/leagues'
 
 // ── Constants & Helpers ───────────────────────────────────────────────────────
 
@@ -400,6 +401,8 @@ export default function HomePanel({ onStartRitual }) {
   const [score, setScore] = useState(0)
   const [streak, setStreak] = useState(0)
   const [stats, setStats] = useState({ today: 0, week: 0 })
+  const [weeklyXp, setWeeklyXp] = useState(0)
+  const [leagueTier, setLeagueTier] = useState(0)
   const [showForm, setShowForm] = useState(false)
   const [trackName, setTrackName] = useState('')
   const [trackColor, setTrackColor] = useState(TRACK_COLORS[0])
@@ -413,15 +416,17 @@ export default function HomePanel({ onStartRitual }) {
     todayStart.setHours(0, 0, 0, 0)
     const weekStart = daysAgo(new Date().getDay()).toISOString()
 
-    const [tracksRes, completions30Res, completionsTodayRes] = await Promise.all([
+    const [tracksRes, completions30Res, completionsTodayRes, leagueRes] = await Promise.all([
       supabase.from('tracks').select('*').order('created_at'),
       supabase.from('completions').select('habit_id, completed_at').eq('user_id', user.id).gte('completed_at', thirtyDaysAgo),
       supabase.from('completions').select('habit_id').eq('user_id', user.id).gte('completed_at', todayStart.toISOString()),
+      supabase.from('user_league').select('tier, weekly_xp').eq('user_id', user.id).maybeSingle(),
     ])
 
     const tracks = tracksRes.data ?? []
     const completions30 = completions30Res.data ?? []
     const completionsToday = completionsTodayRes.data ?? []
+    const leagueData = leagueRes.data
 
     // Fetch all habits for these tracks
     const trackIds = tracks.map((t) => t.id)
@@ -504,6 +509,8 @@ export default function HomePanel({ onStartRitual }) {
     setScore(dailyScore)
     setStreak(globalStreak)
     setStats({ today: todayCount, week: weekCount })
+    setWeeklyXp(leagueData?.weekly_xp ?? 0)
+    setLeagueTier(leagueData?.tier ?? 0)
     setLoading(false)
   }
 
@@ -543,6 +550,7 @@ export default function HomePanel({ onStartRitual }) {
   }
 
   const streakEmoji = streak >= 7 ? '🔥' : streak >= 3 ? '⚡' : '🌱'
+  const tierInfo = LEAGUE_TIERS[leagueTier] ?? LEAGUE_TIERS[0]
 
   if (loading) {
     return (
@@ -579,9 +587,19 @@ export default function HomePanel({ onStartRitual }) {
                 <p className="text-[10px] text-[#7b82b0] mt-0.5">this week</p>
               </div>
               <div className="bg-[#22263a] rounded-lg px-2 py-2 text-center">
-                <p className="text-base font-bold text-[#f7971e]">{streak}d</p>
-                <p className="text-[10px] text-[#7b82b0] mt-0.5">streak</p>
+                <p className="text-base font-bold" style={{ color: '#eab308' }}>{weeklyXp}</p>
+                <p className="text-[10px] text-[#7b82b0] mt-0.5">XP this wk</p>
               </div>
+            </div>
+            {/* League badge */}
+            <div className="mt-2 flex items-center gap-1.5">
+              <span
+                className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                style={{ backgroundColor: tierInfo.color + '20', color: tierInfo.color, border: `1px solid ${tierInfo.color}40` }}
+              >
+                {tierInfo.name}
+              </span>
+              <span className="text-[10px] text-[#4a5080]">league</span>
             </div>
           </div>
         </div>
@@ -680,7 +698,7 @@ export default function HomePanel({ onStartRitual }) {
               trackStreak={trackData[track.id]?.trackStreak ?? 0}
               onDelete={handleDeleteTrack}
               onUpdate={handleUpdateTrack}
-              onStartRitual={onStartRitual}
+              onStartRitual={(track, habits) => onStartRitual(track, habits, streak)}
               onRefreshData={fetchAll}
             />
           ))}

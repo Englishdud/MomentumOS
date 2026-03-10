@@ -2,12 +2,22 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import confetti from 'canvas-confetti'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { useSettings } from '../contexts/SettingsContext'
 
 // Format seconds as MM:SS
 function formatTime(seconds) {
   const m = Math.floor(seconds / 60)
   const s = seconds % 60
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+}
+
+// Monday of the current week as YYYY-MM-DD
+function currentMondayISO() {
+  const d = new Date()
+  const day = d.getDay() // 0=Sun
+  const diff = day === 0 ? -6 : 1 - day
+  d.setDate(d.getDate() + diff)
+  return d.toISOString().slice(0, 10)
 }
 
 // ─── Single Habit Timer Screen ──────────────────────────────────────
@@ -156,7 +166,7 @@ function HabitTimer({ habit, index, total, onDone }) {
 }
 
 // ─── Summary Screen ─────────────────────────────────────────────────
-function RitualSummary({ track, completedHabits, totalElapsed, onClose }) {
+function RitualSummary({ track, completedHabits, totalElapsed, totalXpEarned, onClose }) {
   useEffect(() => {
     // Fire confetti burst when the summary mounts
     const fire = (particleRatio, opts) =>
@@ -188,7 +198,7 @@ function RitualSummary({ track, completedHabits, totalElapsed, onClose }) {
       <p className="text-sm text-[#7b82b0] mb-8">{track.name}</p>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 w-full max-w-xs mb-10">
+      <div className="grid grid-cols-3 gap-3 w-full max-w-xs mb-10">
         <div className="bg-[#1a1d27] border border-[#2e3250] rounded-xl p-4 text-center">
           <p className="text-2xl font-bold text-[#6c63ff]">{completedHabits}</p>
           <p className="text-xs text-[#7b82b0] mt-1">habits done</p>
@@ -196,6 +206,10 @@ function RitualSummary({ track, completedHabits, totalElapsed, onClose }) {
         <div className="bg-[#1a1d27] border border-[#2e3250] rounded-xl p-4 text-center">
           <p className="text-2xl font-bold text-[#43e97b]">{formatTime(totalElapsed)}</p>
           <p className="text-xs text-[#7b82b0] mt-1">total time</p>
+        </div>
+        <div className="bg-[#1a1d27] border border-[#eab308] border-opacity-40 rounded-xl p-4 text-center">
+          <p className="text-2xl font-bold" style={{ color: '#eab308' }}>+{totalXpEarned}</p>
+          <p className="text-xs text-[#7b82b0] mt-1">XP earned</p>
         </div>
       </div>
 
@@ -229,27 +243,71 @@ function RitualSummary({ track, completedHabits, totalElapsed, onClose }) {
 }
 
 // ─── Main DailyRitual ───────────────────────────────────────────────
-export default function DailyRitual({ track, habits, onClose }) {
+export default function DailyRitual({ track, habits, streak = 0, onClose }) {
   const { user } = useAuth()
+  const { settings } = useSettings()
   const [currentIndex, setCurrentIndex] = useState(0)
   const [completed, setCompleted] = useState(false)
   const [totalElapsed, setTotalElapsed] = useState(0)
   const [completedCount, setCompletedCount] = useState(0)
+  const [totalXpEarned, setTotalXpEarned] = useState(0)
 
   const handleHabitDone = async (elapsed) => {
     const habit = habits[currentIndex]
 
-    // Write completion to database
+    // Compute XP for this habit
+    const streakBonus = streak >= 14 ? 20 : streak >= 7 ? 10 : streak >= 3 ? 5 : 0
+    const xp = 10 + Math.min(habit.duration_minutes ?? 0, 30) + streakBonus
+
+    // Insert completion with XP
     await supabase.from('completions').insert({
       habit_id: habit.id,
       user_id: user.id,
       completed_at: new Date().toISOString(),
+      xp_earned: xp,
     })
+
+    // Update user_league (select then update for atomic-ish increment)
+    const monday = currentMondayISO()
+    const displayName = settings.display_name || user?.email || ''
+    const { data: leagueRow } = await supabase
+      .from('user_league')
+      .select('tier, weekly_xp, total_xp, week_start')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (!leagueRow) {
+      // First time — insert a fresh row
+      await supabase.from('user_league').insert({
+        user_id: user.id,
+        display_name: displayName,
+        tier: 0,
+        week_start: monday,
+        weekly_xp: xp,
+        total_xp: xp,
+      })
+    } else {
+      const isNewWeek = leagueRow.week_start < monday
+      const newWeeklyXp = isNewWeek ? xp : leagueRow.weekly_xp + xp
+      const newTotalXp = leagueRow.total_xp + xp
+      await supabase
+        .from('user_league')
+        .update({
+          display_name: displayName,
+          week_start: isNewWeek ? monday : leagueRow.week_start,
+          weekly_xp: newWeeklyXp,
+          total_xp: newTotalXp,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', user.id)
+    }
 
     const newTotal = totalElapsed + elapsed
     const newCount = completedCount + 1
+    const newXp = totalXpEarned + xp
     setTotalElapsed(newTotal)
     setCompletedCount(newCount)
+    setTotalXpEarned(newXp)
 
     // Advance to next habit or show summary
     if (currentIndex + 1 < habits.length) {
@@ -265,6 +323,7 @@ export default function DailyRitual({ track, habits, onClose }) {
         track={track}
         completedHabits={completedCount}
         totalElapsed={totalElapsed}
+        totalXpEarned={totalXpEarned}
         onClose={onClose}
       />
     )
